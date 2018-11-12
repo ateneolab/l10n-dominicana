@@ -320,7 +320,13 @@ class AccountInvoice(models.Model):
                 if self.is_nd:
                     self.reference = sequence_id.with_context(sale_fiscal_type='debit_note')._next()
                 else:
-                    self.reference = sequence_id.with_context(sale_fiscal_type=self.sale_fiscal_type)._next()
+                    consumed = True
+                    while consumed:
+                        try:
+                            self.reference = sequence_id.with_context(sale_fiscal_type=self.sale_fiscal_type)._next()
+                            consumed = False
+                        except ValueError:
+                            _logger.error('Comprobante %s estaba consumido' % self.reference)
             elif self.type == 'out_refund':
                 self.reference = sequence_id.with_context(sale_fiscal_type='credit_note')._next()
             elif self.type == 'in_invoice':
