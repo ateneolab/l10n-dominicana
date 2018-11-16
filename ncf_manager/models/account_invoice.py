@@ -322,11 +322,13 @@ class AccountInvoice(models.Model):
                 else:
                     consumed = True
                     while consumed:
-                        try:
-                            self.reference = sequence_id.with_context(sale_fiscal_type=self.sale_fiscal_type)._next()
+                        next_sequence = sequence_id.with_context(sale_fiscal_type=self.sale_fiscal_type)._next()
+                        client_invoices = records.search([('type', 'in', ['out_invoice']), ('ncf_control', '=', 'True'), ('state', '!=', 'draft')], order="date_invoice asc, id asc").mapped('reference')
+                        if next_sequence in client_invoices:
+                            _logger.error('Comprobante %s estaba consumido' % next_sequence)
+                        else:
+                            self.reference = next_sequence
                             consumed = False
-                        except ValueError:
-                            _logger.error('Comprobante %s estaba consumido' % self.reference)
             elif self.type == 'out_refund':
                 self.reference = sequence_id.with_context(sale_fiscal_type='credit_note')._next()
             elif self.type == 'in_invoice':
