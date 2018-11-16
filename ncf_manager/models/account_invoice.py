@@ -314,7 +314,13 @@ class AccountInvoice(models.Model):
                     consumed = True
                     while consumed:
                         next_sequence = sequence_id.with_context(sale_fiscal_type=self.sale_fiscal_type)._next()
-                        client_invoices = records.search([('type', 'in', ['out_invoice']), ('ncf_control', '=', 'True'), ('state', '!=', 'draft')], order="date_invoice asc, id asc").mapped('reference')
+                        client_invoices = records.search([
+                            ('type', 'in', ['out_invoice']),
+                            ('ncf_control', '=', True),
+                            ('journal_id', '=', self.journal_id),
+                            ('state', '!=', 'draft'),
+                            ('company_id', '=', self.company_id)],
+                            order="date_invoice asc, id asc").mapped('reference')
                         if next_sequence in client_invoices:
                             _logger.error('Comprobante %s estaba consumido' % next_sequence)
                         else:
