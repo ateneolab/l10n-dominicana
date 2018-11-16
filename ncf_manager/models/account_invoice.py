@@ -237,13 +237,14 @@ class AccountInvoice(models.Model):
         if self.journal_id.purchase_type in ('normal', 'informal', 'minor'):
             self.validate_fiscal_purchase()
 
-        if self.origin_out and self.type == 'out_refund' and self.journal_id.ncf_control:
-            ncf = self.origin_out
-            if not ncf_validation.is_valid(ncf):
-                raise UserError(_(
-                    "NCF mal digitado\n\n"
-                    "El comprobante *{}* no tiene la estructura correcta "
-                    "valide si lo ha digitado correctamente".format(ncf)))
+        if self.origin_out and (self.type == 'out_refund' or self.type == 'in_refund'):
+            if self.journal_id.purchase_type in ('normal', 'informal', 'minor') or self.journal_id.ncf_control:
+                ncf = self.origin_out
+                if not ncf_validation.is_valid(ncf) and ncf[-10:-8] != '04':
+                    raise UserError(_(
+                        "NCF mal digitado\n\n"
+                        "El comprobante *{}* no tiene la estructura correcta "
+                        "valide si lo ha digitado correctamente".format(ncf)))
 
     @api.multi
     def action_invoice_open(self):
@@ -295,19 +296,9 @@ class AccountInvoice(models.Model):
             res.update({"reference": False, "origin_out": self.reference})
 
         if self._context.get("credit_note_supplier_ncf", False):
-            res.update({"reference": self._context["credit_note_supplier_ncf"]
+            res.update({"reference": self._context["credit_note_supplier_ncf"], "origin_out": self.reference
                         })
         return res
-
-    @api.onchange('invoice_line_ids')
-    def _onchange_origin(self):
-        """This method is being inherited as Odoo uses the purchase reference and
-           puts it into the invoice reference (our NCF), we change this behaviour to
-           use the invoice name (description)"""
-        purchase_ids = self.invoice_line_ids.mapped('purchase_id')
-        if purchase_ids:
-            self.origin = ', '.join(purchase_ids.mapped('name'))
-            self.name = ', '.join(purchase_ids.filtered('partner_ref').mapped('partner_ref')) or self.reference
 
     @api.multi
     def invoice_validate(self):
