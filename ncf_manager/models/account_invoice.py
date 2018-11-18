@@ -317,8 +317,7 @@ class AccountInvoice(models.Model):
                         client_invoices = records.search([
                             ('type', 'in', ['out_invoice']),
                             ('ncf_control', '=', True),
-                            ('journal_id', '=', self.journal_id),
-                            ('state', '!=', 'draft'),
+                            ('reference', '!=', False),
                             ('company_id', '=', self.company_id)],
                             order="date_invoice asc, id asc").mapped('reference')
                         if next_sequence in client_invoices:
